@@ -1,0 +1,33 @@
+include "lib/params.idp"
+
+int n = argInt("-n", 64);
+real nu = argReal("-nu", 0.1), kappa = 1.;
+
+include "lib/boussinesq.idp"
+
+mesh Th = square(n, n);
+fespace Wh(Th, [P2, P2, P1, P2]);
+Wh [u1, u2, p, T] = [0, 0, 0, 0];
+int niter;
+real[int] hist(maxit);
+
+NEWTON(0, 0, 0, on(1, 2, 3, 4, u1 = 0, u2 = 0) + on(1, 4, T = 0) + on(2, T = 4*y*(1 - y)))
+
+fespace Vh(Th, P2);
+Vh psi, phi;
+solve streamfunction(psi, phi) = int2d(Th)(grad(psi)'*grad(phi))
+    - int2d(Th)((dx(u2) - dy(u1))*phi) + on(1, 2, 3, 4, psi = 0);
+
+int N = 100;
+ofstream f("results/q4/cavity_nu" + nu + ".txt");
+f.precision(10);
+f << "# x y u1 u2 p T psi" << endl;
+for (int j = 0; j <= N; j++)
+    for (int i = 0; i <= N; i++) {
+        real xx = real(i)/N, yy = real(j)/N;
+        f << xx << " " << yy << " " << u1(xx, yy) << " " << u2(xx, yy) << " "
+          << p(xx, yy) << " " << T(xx, yy) << " " << psi(xx, yy) << endl;
+    }
+
+cout << "nu = " << nu << ", n = " << n << ", Newton : " << niter << " iterations, last incr = " << hist[niter - 1] << endl;
+cout << "psi in [" << psi[].min << ", " << psi[].max << "]" << endl;

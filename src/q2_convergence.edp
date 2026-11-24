@@ -1,0 +1,36 @@
+load "Element_P3"
+include "lib/params.idp"
+
+int k = argInt("-k", 2);
+int nmin = argInt("-nmin", 4), nmax = argInt("-nmax", 128);
+real nu = 1., kappa = 1.;
+
+include "lib/exact.idp"
+include "lib/boussinesq.idp"
+
+mesh Th;
+int niter, ndof;
+real[int] hist(maxit);
+real eu, ep, eT, eu0, ep0, eT0;
+
+ofstream f("results/q2/conv_P" + k + ".txt");
+f.precision(10);
+f << "# n h ndof eu ep eT r_u r_p r_T niter" << endl;
+cout << "P" << k << "-P" << k - 1 << "-P" << k << endl;
+cout << "n\tndof\teu\t\tep\t\teT\t\tr_u\tr_p\tr_T\tNewton" << endl;
+
+for (int n = nmin; n <= nmax; n *= 2) {
+    Th = square(n, n);
+    if (k == 2) { MMS(P2, P1) } else { MMS(P3, P2) }
+    real ru = 0, rp = 0, rT = 0;
+    if (n > nmin) {
+        ru = log(eu0/eu)/log(2.);
+        rp = log(ep0/ep)/log(2.);
+        rT = log(eT0/eT)/log(2.);
+    }
+    f << n << " " << 1./n << " " << ndof << " " << eu << " " << ep << " " << eT << " "
+      << ru << " " << rp << " " << rT << " " << niter << endl;
+    cout << n << "\t" << ndof << "\t" << eu << "\t" << ep << "\t" << eT << "\t"
+         << ru << "\t" << rp << "\t" << rT << "\t" << niter << endl;
+    eu0 = eu; ep0 = ep; eT0 = eT;
+}

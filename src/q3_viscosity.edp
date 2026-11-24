@@ -1,0 +1,51 @@
+include "lib/params.idp"
+
+int nmin = argInt("-nmin", 8), nmax = argInt("-nmax", 64);
+real nu, kappa = 1.;
+real[int] nus = [1., 1e-1, 1e-2, 1e-3, 1e-4];
+
+include "lib/exact.idp"
+include "lib/boussinesq.idp"
+
+int nn = 0;
+for (int n = nmin; n <= nmax; n *= 2) nn++;
+real[int, int] EU(nus.n, nn), EP(nus.n, nn), ET(nus.n, nn);
+int[int, int] NI(nus.n, nn);
+
+mesh Th;
+int niter;
+real[int] hist(maxit);
+real eu, ep, eT;
+
+// Continuation in nu: on each mesh, the solution for nu is the initial guess for nu/10.
+for (int i = 0; i < nn; i++) {
+    int n = nmin*2^i;
+    Th = square(n, n);
+    fespace Wh(Th, [P2, P2, P1, P2]);
+    Wh [u1, u2, p, T] = [0, 0, 0, 0];
+    for (int j = 0; j < nus.n; j++) {
+        nu = nus[j];
+        NEWTON(f1, f2, fT, on(1, 2, 3, 4, u1 = 0, u2 = 0, T = 0))
+        ERRORS(eu, ep, eT, 8)
+        EU(j, i) = eu; EP(j, i) = ep; ET(j, i) = eT; NI(j, i) = niter;
+    }
+}
+
+ofstream f("results/q3/visc_P2.txt");
+f.precision(10);
+f << "# nu n h eu ep eT r_u r_p r_T niter" << endl;
+cout << "nu\tn\teu\t\tep\t\teT\t\tr_u\tr_p\tr_T\tNewton" << endl;
+for (int j = 0; j < nus.n; j++)
+    for (int i = 0; i < nn; i++) {
+        int n = nmin*2^i;
+        real ru = 0, rp = 0, rT = 0;
+        if (i > 0) {
+            ru = log(EU(j, i - 1)/EU(j, i))/log(2.);
+            rp = log(EP(j, i - 1)/EP(j, i))/log(2.);
+            rT = log(ET(j, i - 1)/ET(j, i))/log(2.);
+        }
+        f << nus[j] << " " << n << " " << 1./n << " " << EU(j, i) << " " << EP(j, i) << " " << ET(j, i) << " "
+          << ru << " " << rp << " " << rT << " " << NI(j, i) << endl;
+        cout << nus[j] << "\t" << n << "\t" << EU(j, i) << "\t" << EP(j, i) << "\t" << ET(j, i) << "\t"
+             << ru << "\t" << rp << "\t" << rT << "\t" << NI(j, i) << endl;
+    }

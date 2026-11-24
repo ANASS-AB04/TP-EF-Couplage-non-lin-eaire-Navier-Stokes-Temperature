@@ -1,0 +1,35 @@
+// Requires: mesh Th, real nu, kappa, fespace Wh = [PU,PU,PP,PU] with Wh [u1,u2,p,T] (initial guess),
+// int niter, real[int] hist(maxit).
+real eps = 1e-10, tol = 1e-10;
+int maxit = 30;
+
+macro grad(f) [dx(f), dy(f)] //
+macro div(a1, a2) (dx(a1) + dy(a2)) //
+macro adv(a1, a2, f) (a1*dx(f) + a2*dy(f)) //
+
+// Newton in direct form: (w1,w2,wT) is the previous iterate, (u1,u2,p,T) the new one.
+macro NEWTON(F1, F2, FT, BCS)
+{
+    Wh [w1, w2, wp, wT] = [u1, u2, p, T], [v1, v2, q, S];
+    problem linearized([u1, u2, p, T], [v1, v2, q, S], solver=sparsesolver) =
+        int2d(Th)(nu*(grad(u1)'*grad(v1) + grad(u2)'*grad(v2))
+            + (adv(w1, w2, u1) + adv(u1, u2, w1))*v1
+            + (adv(w1, w2, u2) + adv(u1, u2, w2))*v2
+            - p*div(v1, v2) - q*div(u1, u2) - eps*p*q - T*v2
+            + kappa*grad(T)'*grad(S) + adv(w1, w2, T)*S + adv(u1, u2, wT)*S)
+        - int2d(Th)((F1 + adv(w1, w2, w1))*v1 + (F2 + adv(w1, w2, w2))*v2 + (FT + adv(w1, w2, wT))*S)
+        + BCS;
+    niter = 0;
+    real incr = 1.;
+    while (incr > tol && niter < maxit) {
+        linearized;
+        real pm = int2d(Th)(p)/int2d(Th)(1.);
+        [u1, u2, p, T] = [u1, u2, p - pm, T];
+        real[int] d = u1[];
+        d -= w1[];
+        incr = d.l2/u1[].l2;
+        w1[] = u1[];
+        hist[niter++] = incr;
+    }
+}
+//

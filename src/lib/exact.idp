@@ -1,0 +1,37 @@
+func u1ex = sin(pi*x)^2*sin(pi*y)^2*cos(pi*y);
+func u2ex = -sin(2*pi*x)*sin(pi*y)^3/3;
+func pex  = x^4 - y^4;
+func Tex  = sin(pi*x)*sin(pi*y);
+
+func dxu1 = 2*pi*sin(pi*x)*cos(pi*x)*sin(pi*y)^2*cos(pi*y);
+func dyu1 = pi*sin(pi*x)^2*sin(pi*y)*(2 - 3*sin(pi*y)^2);
+func dxu2 = -2*pi*cos(2*pi*x)*sin(pi*y)^3/3;
+func dyu2 = -pi*sin(2*pi*x)*sin(pi*y)^2*cos(pi*y);
+func dxT  = pi*cos(pi*x)*sin(pi*y);
+func dyT  = pi*sin(pi*x)*cos(pi*y);
+
+func lapu1 = pi^2*cos(pi*y)*(2*sin(pi*x)^2 + 2*sin(pi*y)^2 - 13*sin(pi*x)^2*sin(pi*y)^2);
+func lapu2 = pi^2*sin(2*pi*x)*sin(pi*y)*(13*sin(pi*y)^2 - 6)/3;
+func lapT  = -2*pi^2*Tex;
+
+func f1 = -nu*lapu1 + u1ex*dxu1 + u2ex*dyu1 + 4*x^3;
+func f2 = -nu*lapu2 + u1ex*dxu2 + u2ex*dyu2 - 4*y^3 - Tex;
+func fT = -kappa*lapT + u1ex*dxT + u2ex*dyT;
+
+macro ERRORS(eu, ep, eT, qf)
+eu = sqrt(int2d(Th, qforder=qf)((u1 - u1ex)^2 + (u2 - u2ex)^2
+        + (dx(u1) - dxu1)^2 + (dy(u1) - dyu1)^2 + (dx(u2) - dxu2)^2 + (dy(u2) - dyu2)^2));
+ep = sqrt(int2d(Th, qforder=qf)((p - pex)^2));
+eT = sqrt(int2d(Th, qforder=qf)((T - Tex)^2 + (dx(T) - dxT)^2 + (dy(T) - dyT)^2));
+//
+
+// Requires: int k, ndof, niter; real eu, ep, eT; real[int] hist.
+macro MMS(PU, PP)
+{
+    fespace Wh(Th, [PU, PU, PP, PU]);
+    Wh [u1, u2, p, T] = [0, 0, 0, 0];
+    NEWTON(f1, f2, fT, on(1, 2, 3, 4, u1 = 0, u2 = 0, T = 0))
+    ERRORS(eu, ep, eT, 2*k + 4)
+    ndof = Wh.ndof;
+}
+//

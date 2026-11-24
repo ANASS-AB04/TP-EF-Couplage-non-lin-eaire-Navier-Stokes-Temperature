@@ -1,0 +1,32 @@
+load "Element_P3"
+include "lib/params.idp"
+
+int k = argInt("-k", 2);
+int n = argInt("-n", 16);
+real nu = 1., kappa = 1.;
+
+include "lib/exact.idp"
+include "lib/boussinesq.idp"
+
+mesh Th = square(n, n);
+int niter, ndof;
+real[int] hist(maxit);
+real eu, ep, eT;
+
+if (k == 2) { MMS(P2, P1) } else { MMS(P3, P2) }
+
+{
+    ofstream f("results/q1/newton_P" + k + ".txt");
+    f << "# it incr" << endl;
+    for (int i = 0; i < niter; i++) f << i + 1 << " " << hist[i] << endl;
+}
+{
+    ofstream f("results/q1/errors_P" + k + ".txt");
+    f.precision(10);
+    f << "# k n ndof eu ep eT niter" << endl;
+    f << k << " " << n << " " << ndof << " " << eu << " " << ep << " " << eT << " " << niter << endl;
+}
+
+cout << "P" << k << "-P" << k - 1 << "-P" << k << ", n = " << n << ", ndof = " << ndof << endl;
+for (int i = 0; i < niter; i++) cout << "  Newton " << i + 1 << " : incr = " << hist[i] << endl;
+cout << "  |u-uh|_1 = " << eu << ", |p-ph|_0 = " << ep << ", |T-Th|_1 = " << eT << endl;

@@ -1,0 +1,11 @@
+func int argInt(string name, int def) {
+    for (int i = 0; i < ARGV.n - 1; i++)
+        if (ARGV[i] == name) return atoi(ARGV[i + 1]);
+    return def;
+}
+
+func real argReal(string name, real def) {
+    for (int i = 0; i < ARGV.n - 1; i++)
+        if (ARGV[i] == name) return atof(ARGV[i + 1]);
+    return def;
+}
